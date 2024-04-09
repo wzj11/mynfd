@@ -23,12 +23,21 @@ def check_mesh_contains(mesh, points, hash_resolution=512):
 
 class MeshIntersector:
     def __init__(self, mesh, resolution=512):
+        # triangles.shape: (num_faces, 3, 3), 第一个3代表每个面上有3个点，第二个3代表每个点对应的坐标
         triangles = mesh.vertices[mesh.faces].astype(np.float64)
+        
+        
+        # 这里n_tri是面的个数，因为mesh.vertices[mesh.faces]表示按面的数量来索引
+
         n_tri = triangles.shape[0]
 
         self.resolution = resolution
+        # 找出所有点中三个坐标各自的最小值
         self.bbox_min = triangles.reshape(3 * n_tri, 3).min(axis=0)
+        # 找出所有点中三个坐标各自的最大值
         self.bbox_max = triangles.reshape(3 * n_tri, 3).max(axis=0)
+
+        #TODO: 为什么要变换到这个区间内？
         # Tranlate and scale it to [0.5, self.resolution - 0.5]^3
         self.scale = (resolution - 1) / (self.bbox_max - self.bbox_min)
         self.translate = 0.5 - self.scale * self.bbox_min
@@ -37,6 +46,8 @@ class MeshIntersector:
         # assert(np.allclose(triangles.reshape(-1, 3).min(0), 0.5))
         # assert(np.allclose(triangles.reshape(-1, 3).max(0), resolution - 0.5))
 
+
+        #TODO: 只要x， y的坐标，为什么？
         triangles2d = triangles[:, :, :2]
         self._tri_intersector2d = TriangleIntersector2d(
             triangles2d, resolution)

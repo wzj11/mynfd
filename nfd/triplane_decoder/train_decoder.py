@@ -37,8 +37,8 @@ for epoch in range(30000):
         d_rand_coords_offset = model(obj_idx, rand_coords_offset)
         loss += nn.functional.mse_loss(d_rand_coords, d_rand_coords_offset) * 3e-1
 
-	loss += model.tvreg() * 1e-2
-	loss += model.l2reg() * 1e-3
+        loss += model.tvreg() * 1e-2
+        loss += model.l2reg() * 1e-3
         
         optimizer.zero_grad()
         loss.backward()

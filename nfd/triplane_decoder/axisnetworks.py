@@ -517,9 +517,13 @@ class MiniTriplane(nn.Module):
 
 class MultiTriplane(nn.Module):
     def __init__(self, num_objs, input_dim=3, output_dim=1, noise_val = None, device = 'cuda'):
+
+        # noise_val是什么？
         super().__init__()
         self.device = device
         self.num_objs = num_objs
+
+        # 每个物体（obj）有3个平面，所以一共有num_objs个物体的情况下就有3*num_objs个平面
         self.embeddings = nn.ParameterList([nn.Parameter(torch.randn(1, 32, 128, 128)*0.001) for _ in range(3*num_objs)])
         self.noise_val = noise_val
         # Use this if you want a PE
@@ -534,6 +538,7 @@ class MultiTriplane(nn.Module):
             nn.Linear(128, output_dim),
         )
 
+    # TODO 感觉可以直接用
     def sample_plane(self, coords2d, plane):
         assert len(coords2d.shape) == 3, coords2d.shape
         sampled_features = torch.nn.functional.grid_sample(plane,
@@ -543,6 +548,8 @@ class MultiTriplane(nn.Module):
         sampled_features = sampled_features.reshape(N, C, H*W).permute(0, 2, 1)
         return sampled_features
 
+    # 1. 从triplanes中提取特征
+    # 2. 将triplane features转换为sdf（原来是转换为occupancy value）
     def forward(self, obj_idx, coordinates, debug=False):
         batch_size, n_coords, n_dims = coordinates.shape
         
@@ -555,7 +562,7 @@ class MultiTriplane(nn.Module):
         #    yz_embed = yz_embed + self.noise_val*torch.empty(yz_embed.shape).normal_(mean = 0, std = 0.5).to(self.device)
         #    xz_embed = xz_embed + self.noise_val*torch.empty(xz_embed.shape).normal_(mean = 0, std = 0.5).to(self.device)
 
-                
+        # 提取出三个方向上的features， 然后将它们相加
         features = torch.sum(torch.stack([xy_embed, yz_embed, xz_embed]), dim=0) 
         if self.noise_val != None and self.training:
             features = features + self.noise_val*torch.empty(features.shape).normal_(mean = 0, std = 0.5).to(self.device)

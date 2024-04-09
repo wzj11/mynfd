@@ -42,11 +42,14 @@ def create_obj(model, obj_idx, res=128, max_batch_size=50000, output_path='outpu
     # Output a res x res x res x 1 volume prediction. Download ChimeraX to open the files.
     # Set the threshold in ChimeraX to 0.5 if mrc_mode=0, 0 else
 
+
+    # 先确定要进行预测的空间网格划分
     model.eval()
     xx = torch.linspace(-1, 1, res)
     yy = torch.linspace(-1, 1, res)
     zz = torch.linspace(-1, 1, res)
 
+    # 得到坐标
     (x_coords, y_coords, z_coords) = torch.meshgrid([xx, yy, zz])
     coords = torch.cat([x_coords.unsqueeze(-1), y_coords.unsqueeze(-1), z_coords.unsqueeze(-1)], -1)
 
@@ -79,11 +82,19 @@ def main(args=None):
 
         args = parser.parse_args()
 	
+    # MultiTriplane 将一个三维坐标点的输入转换为一个1位的occupancy value, 其实就是triplane decoder
+    
     model = MultiTriplane(1, input_dim=3, output_dim=1).to(device)
+
+    # model.net应该就是将triplane features转为occupancy values的decoder
     model.net.load_state_dict(torch.load(args.model_path))
     model.eval()
+
+    # 每个triplane平面的分辨率为 (128, 128), 可以认为每个triplane feature的维度为32维
     triplanes = np.load(args.input).reshape(3, 32, 128, 128)
 
+
+    
     with torch.no_grad():
         for i in range(3):
             model.embeddings[i][0] = torch.tensor(triplanes[i]).to(device)

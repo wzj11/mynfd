@@ -63,6 +63,8 @@ def compute_obj(mesh, intersector, max_batch_size = 1000000, res = 1024):
 def generate_gt_obj(filepath):
     print("Loading mesh...")
     mesh = trimesh.load(filepath, process=False, force='mesh', skip_materials=True)
+
+    # 把物体的空间变到[-1, 1]
     normalize_mesh(mesh)
     intersector = inside_mesh.MeshIntersector(mesh, 2048)
 
