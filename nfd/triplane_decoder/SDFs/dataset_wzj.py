@@ -10,7 +10,7 @@ class wzjData(Dataset):
 
         # npz_files = [os.path.join(data_dir, file) for file in os.listdir(data_dir) if file.endswith('.npz')]
 
-        npz_files = ['/home/wzj/data/project/NFD/nfd/triplane_decoder/SDFs/right_data/test.npz']
+        npz_files = ['/home/wzj/data/project/NFD/nfd/triplane_decoder/SDFs/right_data/0.npz']
         file_list = []
         for file in npz_files:
             temp = np.load(file, allow_pickle=True)
@@ -33,7 +33,12 @@ class wzjData(Dataset):
     def __getitem__(self, idx):
         # 一个npz文件里的内容视为一个单独的整体
         # print(self.data[idx].shape)
-        return idx, torch.from_numpy(self.data[idx]['P_s'][..., 0:3]), torch.from_numpy(self.data[idx]['P_s'][..., 3:4]), torch.from_numpy(self.data[idx]['P_s'][..., 4:]), torch.from_numpy(self.data[idx]['P_v'])
+        X = torch.from_numpy(self.data[idx]['P_s'][..., 0:3])
+        # print(X.shape[0], X.shape[0] / 4)
+        X_1 = X[0:X.shape[0] // 4, ...]
+        X_2 = X[X.shape[0] // 4:, ...]
+        Y = torch.from_numpy(self.data[idx]['P_s'][X.shape[0] // 4:, 3:4])
+        return idx, X_1, X_2, Y, torch.from_numpy(self.data[idx]['P_n']), torch.from_numpy(self.data[idx]['P_v'])
 
 
 def main():

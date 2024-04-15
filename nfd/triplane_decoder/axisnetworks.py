@@ -535,18 +535,18 @@ class MultiTriplane(nn.Module):
         self.num_objs = num_objs
 
         # 每个物体（obj）有3个平面，所以一共有num_objs个物体的情况下就有3*num_objs个平面
-        self.embeddings = nn.ParameterList([nn.Parameter(torch.randn(1, 40, 128, 128)*0.001) for _ in range(3*num_objs)])
+        self.embeddings = nn.ParameterList([nn.Parameter(torch.randn(1, 64, 128, 128)*0.001) for _ in range(3*num_objs)])
         self.noise_val = noise_val
         # Use this if you want a PE
         self.net = nn.Sequential(
-            FourierFeatureTransform(120, 256, scale=1),
-            nn.Linear(512, 512),
+            FourierFeatureTransform(64, 128, scale=1),
+            nn.Linear(256, 256),
             nn.Softplus(),
             
-            nn.Linear(512, 512),
+            nn.Linear(256, 256),
             nn.Softplus(),
             
-            nn.Linear(512, output_dim),
+            nn.Linear(256, output_dim),
         )
 
     # TODO 感觉可以直接用
@@ -575,8 +575,8 @@ class MultiTriplane(nn.Module):
         #    xz_embed = xz_embed + self.noise_val*torch.empty(xz_embed.shape).normal_(mean = 0, std = 0.5).to(self.device)
 
         # 提取出三个方向上的features， 然后将它们相加
-        # features = torch.sum(torch.stack([xy_embed, yz_embed, xz_embed]), dim=0)
-        features = torch.cat([xy_embed, yz_embed, xz_embed], dim=-1)
+        features = torch.sum(torch.stack([xy_embed, yz_embed, xz_embed]), dim=0)
+        # features = torch.cat([xy_embed, yz_embed, xz_embed], dim=-1)
         if self.noise_val != None and self.training:
             features = features + self.noise_val*torch.empty(features.shape).normal_(mean = 0, std = 0.5).to(self.device)
         # print(features.shape)

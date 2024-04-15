@@ -119,7 +119,10 @@ class MeshSDFS:
         # sdfs = np.zeros((*shape, 1))
         # P_s = np.concatenate((self.vertices, sdfs), axis=-1)
         P_s = self.vertices
-        P_s = np.concatenate([P_s, vertex_normals], axis=-1)
+        interval = np.array([0, 0.15, 0.30, 0.45])
+        P_s = np.concatenate([np.concatenate([P_s + dis * vertex_normals, dis * np.ones((*shape, 1))], axis=-1) for dis in interval], axis=0)
+        # P_s = np.concatenate([P_s, np.repeat(vertex_normals, 4, axis=0)], axis=-1)
+        P_n = vertex_normals
         # output['P_s'] = P_s
 
         *shape_1, points_num, dim = self.vertices.shape
@@ -133,7 +136,7 @@ class MeshSDFS:
 
         # output['P_v'] = P_v
 
-        np.savez(f'right_data/{self.num}.npz', P_s=P_s, P_v=P_v)
+        np.savez(f'right_data/{self.num}.npz', P_s=P_s, P_n=P_n, P_v=P_v)
 
     def test_circle(self):
         interval = np.linspace(-0.5, 0.5, 11)
@@ -230,7 +233,7 @@ def main(file: str = 'mytest.obj', num: int = None):
     l = MeshSDFS(wzj)
     l.sample_sdfs()
 
-    print(l.test_circle().shape)
+    # print(l.test_circle().shape)
     # print(bbox(wzj.vertices))
     # print(boundary(wzj.vertices))
 
