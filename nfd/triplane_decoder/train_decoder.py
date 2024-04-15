@@ -44,7 +44,8 @@ current_datetime = datetime.datetime.now()
 formatted_datetime = current_datetime.strftime("%Y-%m-%d-%H:%M:%S")
 os.makedirs(f'decoder_net_ckpt/{formatted_datetime}')
 os.system(f'ln -s ./{formatted_datetime} decoder_net_ckpt/latest')
-for epoch in range(3000):
+t0 = time.time()
+for epoch in range(10000):
     loss_total = 0
     for obj_idx, X, X_n, truth, normals, sample in dataloader:
         # X, Y = X.float().cuda(), Y.float().cuda()
@@ -65,20 +66,20 @@ for epoch in range(3000):
         # X.requires_grad_(False)
         normals_loss = ((X_grad - normals).abs()).norm(2, dim=-1).mean()
         # # TODO: 加normals_loss 的系数
-        loss = loss + 0.5 * normals_loss
+        loss = loss + 0.2 * normals_loss
 
 
 
         # sdf reg
         pred_reg = model(obj_idx, X_n)
-        loss = loss + 0.5 * ((pred_reg - truth).abs()).mean()
+        loss = loss + 0.2 * ((pred_reg - truth).abs()).mean()
 
         # TODO: 加随机采样点，使其法向（也就是梯度）的模长唯一作为eikonal loss
         sample_preds = model(obj_idx, sample)
         # sample.requires_grad_()
         sample_grad = gradient(sample, sample_preds)
         eikonal_loss = ((sample_grad.norm(2, dim=-1) - 1)**2).mean()
-        loss += 0.5 * eikonal_loss
+        loss += 0.1 * eikonal_loss
 
         
         # # # DENSITY REG
@@ -105,7 +106,11 @@ for epoch in range(3000):
 
         loss_total += loss
         # print(f'Epoch: {epoch} , idx: {obj_idx} Done')
-    print(f"Epoch: {epoch} \t {loss_total.item():01f} \t 'normals_loss:'{normals_loss.item()} \t eikonal_loss:{eikonal_loss.item()} \t ")
+    t1 = time.time()
+    time1 = t1 - t0
+    elapsed_rounded = int(round(time1))
+    time1 = str(datetime.timedelta(seconds=elapsed_rounded))
+    print(f"Epoch: {epoch} \t {loss_total.item():01f} \t 'normals_loss:'{normals_loss.item()} \t eikonal_loss:{eikonal_loss.item()} \t time:{time1} \t")
     
     if epoch%20 == 0:
         torch.save(model.net.state_dict(), f"decoder_net_ckpt/{formatted_datetime}/{epoch}_decoder.pt")

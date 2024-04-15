@@ -119,7 +119,7 @@ class MeshSDFS:
         # sdfs = np.zeros((*shape, 1))
         # P_s = np.concatenate((self.vertices, sdfs), axis=-1)
         P_s = self.vertices
-        interval = np.array([0, 0.15, 0.30, 0.45])
+        interval = np.array([0, 0.15, 0.30, 0.45, -0.15])
         P_s = np.concatenate([np.concatenate([P_s + dis * vertex_normals, dis * np.ones((*shape, 1))], axis=-1) for dis in interval], axis=0)
         # P_s = np.concatenate([P_s, np.repeat(vertex_normals, 4, axis=0)], axis=-1)
         P_n = vertex_normals

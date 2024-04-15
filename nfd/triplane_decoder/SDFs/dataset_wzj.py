@@ -3,13 +3,18 @@ from torch.utils.data import Dataset
 import torch.utils.data
 import numpy as np
 import os
+from glob import glob
 # from wzj_mesh import boundary
 # TODO:
 class wzjData(Dataset):
     def __init__(self, data_dir: str = 'data'):
 
         # npz_files = [os.path.join(data_dir, file) for file in os.listdir(data_dir) if file.endswith('.npz')]
+        wzj = []
+        for i in range(1, 201):
+            wzj.append(glob('~/data/datasets/facescape/{i}/models_reg/*.obj'))
 
+        print(len(wzj))
         npz_files = ['/home/wzj/data/project/NFD/nfd/triplane_decoder/SDFs/right_data/0.npz']
         file_list = []
         for file in npz_files:
@@ -35,23 +40,23 @@ class wzjData(Dataset):
         # print(self.data[idx].shape)
         X = torch.from_numpy(self.data[idx]['P_s'][..., 0:3])
         # print(X.shape[0], X.shape[0] / 4)
-        X_1 = X[0:X.shape[0] // 4, ...]
-        X_2 = X[X.shape[0] // 4:, ...]
-        Y = torch.from_numpy(self.data[idx]['P_s'][X.shape[0] // 4:, 3:4])
+        X_1 = X[0:X.shape[0] // 5, ...]
+        X_2 = X[X.shape[0] // 5:, ...]
+        Y = torch.from_numpy(self.data[idx]['P_s'][X.shape[0] // 5:, 3:4])
         return idx, X_1, X_2, Y, torch.from_numpy(self.data[idx]['P_n']), torch.from_numpy(self.data[idx]['P_v'])
 
 
 def main():
     test = wzjData('data')
-    l_data = torch.utils.data.DataLoader(test, 1, shuffle=True)
+    # l_data = torch.utils.data.DataLoader(test, 1, shuffle=True)
 
     # l_data 中一共有len(dataset) / batchsize 个元素
     # 假如说dataset 中的 __getitem__返回了a,b,c，也就是返回三个元素
     # 那么l_data[0]就是一个大小为3的列表，第一项关于a，维度为(batchsize, *a.shape), 第二项关于。。。
-    for idx, X, truth, normals, Y in l_data:
-        print(X.shape, truth.shape, normals.shape, Y.shape)
+    # for idx, X, truth, normals, Y in l_data:
+        # print(X.shape, truth.shape, normals.shape, Y.shape)
 
-    print(len(l_data))
+    # print(len(l_data))
 
     
 

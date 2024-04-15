@@ -1,0 +1,1 @@
+0.obj: 256分辨率 marching cube结果
