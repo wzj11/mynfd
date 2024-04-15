@@ -36,16 +36,16 @@ formatted_datetime = current_datetime.strftime("%Y-%m-%d-%H:%M:%S")
 os.makedirs(f'decoder_net_ckpt/{formatted_datetime}')
 for epoch in range(30000):
     loss_total = 0
-    for obj_idx, X, normals, sample in dataloader:
+    for obj_idx, X, truth, normals, sample in dataloader:
         # X, Y = X.float().cuda(), Y.float().cuda()
-        X, normals, sample = X.float().cuda(), normals.float().cuda(), sample.float().cuda()
+        X, truth, normals, sample = X.float().cuda(), truth.float().cuda(), normals.float().cuda(), sample.float().cuda()
         X.requires_grad_()
         sample.requires_grad_()
         preds = model(obj_idx, X)
         # loss = nn.BCEWithLogitsLoss()(preds, Y)
 
         # Done: 修改sdf的loss
-        loss = (preds.abs()).mean()
+        loss = ((preds - truth).abs()).mean()
 
         
         X_grad = gradient(X, preds)

@@ -136,6 +136,7 @@ class MeshSDFS:
         np.savez(f'right_data/{self.num}.npz', P_s=P_s, P_v=P_v)
 
     def test_circle(self):
+        interval = np.linspace(-0.5, 0.5, 11)
         np.random.seed(1111)
         phi = np.random.uniform(0, np.pi, 30000)
         theta = np.random.uniform(0, 2*np.pi, 30000)
@@ -152,7 +153,12 @@ class MeshSDFS:
 
         # print(P_v.shape, points_num)
         # print(P_s.shape)
-        np.savez('right_data/test.npz', P_s=np.concatenate((np.stack((x / 2, y / 2, z / 2), axis=-1), np.stack((x, y, z), axis=-1)), axis=-1), P_v=P_v)
+        P_s = np.stack((x / 2, y / 2, z / 2), axis=-1)
+        *shape, dim = P_s.shape
+        vn = np.stack((x, y, z), axis=-1)
+        points = np.concatenate([np.concatenate([P_s + dis * vn, dis * np.ones((*shape, 1))], axis=-1) for dis in interval], axis=0)
+
+        np.savez('right_data/test.npz', P_s=np.concatenate((points, np.repeat(np.stack((x, y, z), axis=-1), 9, axis=0)), axis=-1), P_v=P_v)
         
         # 返回笛卡尔坐标系下的点
         return np.stack((x, y, z), axis=-1)

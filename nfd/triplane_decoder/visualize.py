@@ -64,7 +64,7 @@ def create_obj(model, obj_idx, res=256, max_batch_size=200, output_path='output.
                 head += max_batch_size
                 pbar.update(min(max_batch_size, coords.shape[0] - head))
     
-    print(prediction)
+    # print(prediction)
     prediction = prediction.reshape(res, res, res).cpu().detach().numpy()
     
     smoothed_prediction =  prediction
@@ -79,7 +79,7 @@ def main(args=None):
         parser = argparse.ArgumentParser()
         parser.add_argument('--input', type=str)
         parser.add_argument('--output', type=str, required=True)
-        parser.add_argument('--model_path', type=str, default='/home/wzj/data/project/NFD/nfd/triplane_decoder/decoder_net_ckpt/2024-04-15-09:17:15/1500_decoder.pt', required=False)
+        parser.add_argument('--model_path', type=str, default='/home/wzj/data/project/NFD/nfd/triplane_decoder/decoder_net_ckpt/2024-04-15-09:47:23/1000_decoder.pt', required=False)
         parser.add_argument('--res', type=int, default='128', required=False)
 
         args = parser.parse_args()
@@ -94,7 +94,7 @@ def main(args=None):
 
     # 每个triplane平面的分辨率为 (128, 128), 可以认为每个triplane feature的维度为32维
     # triplanes = np.load(args.input).reshape(3, 32, 128, 128)
-    model.embeddings.load_state_dict(torch.load('/home/wzj/data/project/NFD/nfd/triplane_decoder/decoder_net_ckpt/2024-04-15-09:17:15/triplanes_1500.pt'))
+    model.embeddings.load_state_dict(torch.load('/home/wzj/data/project/NFD/nfd/triplane_decoder/decoder_net_ckpt/2024-04-15-09:47:23/triplanes_1000.pt'))
 
     print(model.embeddings)
     
