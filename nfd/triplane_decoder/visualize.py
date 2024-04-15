@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 import mcubes
 from tqdm import tqdm 
 
-from triplane_decoder.axisnetworks import *
+from axisnetworks import *
 device = torch.device('cuda')
-from triplane_decoder.dataset_3d import *
+from dataset_3d import *
 from matplotlib import pyplot as plt
 
 
@@ -38,7 +38,7 @@ def cross_section(model, obj_idx, res=512, max_batch_size=50000, axis='z'):
     plt.figure(figsize=(16, 16))
     plt.imshow(prediction)
 
-def create_obj(model, obj_idx, res=128, max_batch_size=50000, output_path='output.obj'):
+def create_obj(model, obj_idx, res=256, max_batch_size=200, output_path='output.obj'):
     # Output a res x res x res x 1 volume prediction. Download ChimeraX to open the files.
     # Set the threshold in ChimeraX to 0.5 if mrc_mode=0, 0 else
 
@@ -64,10 +64,12 @@ def create_obj(model, obj_idx, res=128, max_batch_size=50000, output_path='outpu
                 head += max_batch_size
                 pbar.update(min(max_batch_size, coords.shape[0] - head))
     
+    print(prediction)
     prediction = prediction.reshape(res, res, res).cpu().detach().numpy()
     
     smoothed_prediction =  prediction
     vertices, triangles = mcubes.marching_cubes(smoothed_prediction, 0)
+    vertices = (vertices - (res // 2)) / (res // 2)
     mcubes.export_obj(vertices, triangles, output_path)
 
 def main(args=None):
@@ -75,9 +77,9 @@ def main(args=None):
         args = args
     else:
         parser = argparse.ArgumentParser()
-        parser.add_argument('--input', type=str, required=True)
+        parser.add_argument('--input', type=str)
         parser.add_argument('--output', type=str, required=True)
-        parser.add_argument('--model_path', type=str, default='models/epoch_24_decoder_loss=25.37570571899414.pt', required=False)
+        parser.add_argument('--model_path', type=str, default='/home/wzj/data/project/NFD/nfd/triplane_decoder/decoder_net_ckpt/2024-04-15-09:17:15/1500_decoder.pt', required=False)
         parser.add_argument('--res', type=int, default='128', required=False)
 
         args = parser.parse_args()
@@ -91,14 +93,25 @@ def main(args=None):
     model.eval()
 
     # 每个triplane平面的分辨率为 (128, 128), 可以认为每个triplane feature的维度为32维
-    triplanes = np.load(args.input).reshape(3, 32, 128, 128)
+    # triplanes = np.load(args.input).reshape(3, 32, 128, 128)
+    model.embeddings.load_state_dict(torch.load('/home/wzj/data/project/NFD/nfd/triplane_decoder/decoder_net_ckpt/2024-04-15-09:17:15/triplanes_1500.pt'))
 
-
+    print(model.embeddings)
     
-    with torch.no_grad():
-        for i in range(3):
-            model.embeddings[i][0] = torch.tensor(triplanes[i]).to(device)
+    # with torch.no_grad():
+    #     for i in range(3):
+    #         model.embeddings[i][0] = torch.tensor(triplanes[i]).to(device)
 
+    print('wzj')
+    test = torch.tensor([[[1., 0., 1.]]]).cuda()
+    test2 = torch.tensor([[[0.75, 0.75, 0.]]]).cuda()
+    test3 = torch.tensor([[[0., 0., 0.]]]).cuda()
+    print(model(torch.tensor([0]), test))
+    print(model(torch.tensor([0]), test2))
+    print(model(torch.tensor([0]), test3))
+
+    # exit()
     create_obj(model, 0, res = args.res, output_path = args.output)  # res = 256
     
-
+if __name__ == "__main__":
+    main()

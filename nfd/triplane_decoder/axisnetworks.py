@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 import numpy as np
+from torch.autograd import grad
+# from grid_sample_gradfix import grid_sample
+from new_grid_sample import grid_sample
 
 def first_layer_sine_init(m):
     with torch.no_grad():
@@ -196,15 +199,13 @@ class VolumeEmbeddingNetwork(nn.Module):
     def forward(self, coordinates, debug=False):
         batch_size, n_coords, n_dims = coordinates.shape
         if n_dims == 2:
-            sampled_features = torch.nn.functional.grid_sample(self.embeddings,
-                                                               coordinates.reshape(batch_size, 1, -1, n_dims),
-                                                               mode='bilinear', padding_mode='zeros', align_corners=True)
+            sampled_features = grid_sample(self.embeddings,
+                                                               coordinates.reshape(batch_size, 1, -1, n_dims))
             N, C, H, W = sampled_features.shape
             sampled_features = sampled_features.reshape(N, C, H*W).permute(0, 2, 1)
         elif n_dims == 3:
-            sampled_features = torch.nn.functional.grid_sample(self.embeddings,
-                                                               coordinates.reshape(batch_size, 1, 1, -1, n_dims),
-                                                               mode='bilinear', padding_mode='zeros', align_corners=True)
+            sampled_features = grid_sample(self.embeddings,
+                                                               coordinates.reshape(batch_size, 1, 1, -1, n_dims))
             N, C, H, W, D = sampled_features.shape
             sampled_features = sampled_features.reshape(N, C, H*W*D).permute(0, 2, 1)
         return self.net(sampled_features)
@@ -395,9 +396,8 @@ class CartesianPlaneEmbeddingNetwork(nn.Module):
 
     def sample_plane(self, coords2d, plane):
         assert len(coords2d.shape) == 3, coords2d.shape
-        sampled_features = torch.nn.functional.grid_sample(plane,
-                                                           coords2d.reshape(coords2d.shape[0], 1, -1, coords2d.shape[-1]),
-                                                           mode='bilinear', padding_mode='zeros', align_corners=True)
+        sampled_features = grid_sample(plane,
+                                                           coords2d.reshape(coords2d.shape[0], 1, -1, coords2d.shape[-1]))
         N, C, H, W = sampled_features.shape
         sampled_features = sampled_features.reshape(N, C, H*W).permute(0, 2, 1)
         return sampled_features
@@ -436,9 +436,8 @@ class CartesianPlaneEmbeddingNetwork2(nn.Module):
 
     def sample_plane(self, coords2d, plane):
         assert len(coords2d.shape) == 3, coords2d.shape
-        sampled_features = torch.nn.functional.grid_sample(plane,
-                                                           coords2d.reshape(coords2d.shape[0], 1, -1, coords2d.shape[-1]),
-                                                           mode='bilinear', padding_mode='zeros', align_corners=True)
+        sampled_features = grid_sample(plane,
+                                                           coords2d.reshape(coords2d.shape[0], 1, -1, coords2d.shape[-1]))
         N, C, H, W = sampled_features.shape
         sampled_features = sampled_features.reshape(N, C, H*W).permute(0, 2, 1)
         return sampled_features
@@ -488,9 +487,8 @@ class MiniTriplane(nn.Module):
 
     def sample_plane(self, coords2d, plane):
         assert len(coords2d.shape) == 3, coords2d.shape
-        sampled_features = torch.nn.functional.grid_sample(plane,
-                                                           coords2d.reshape(coords2d.shape[0], 1, -1, coords2d.shape[-1]),
-                                                           mode='bilinear', padding_mode='zeros', align_corners=True)
+        sampled_features = grid_sample(plane,
+                                                           coords2d.reshape(coords2d.shape[0], 1, -1, coords2d.shape[-1]))
         N, C, H, W = sampled_features.shape
         sampled_features = sampled_features.reshape(N, C, H*W).permute(0, 2, 1)
         return sampled_features
@@ -513,10 +511,23 @@ class MiniTriplane(nn.Module):
             l += ((embed[:, :, :, 1:] - embed[:, :, :, :-1])**2).sum()**0.5
         return l
     
-    
+def gradient(inputs, outputs):
+    # inputs.shape: (N, 3)
+
+    d_points = torch.ones_like(outputs, requires_grad=False, device=outputs.device)
+    points_grad = grad(
+        outputs=outputs,
+        inputs=inputs,
+        grad_outputs=d_points,
+        create_graph=True,
+        retain_graph=True,
+        only_inputs=True)[0]
+    return points_grad
 
 class MultiTriplane(nn.Module):
     def __init__(self, num_objs, input_dim=3, output_dim=1, noise_val = None, device = 'cuda'):
+        # forward输入的维度：(batch, point_num, 3)
+
 
         # noise_val是什么？
         super().__init__()
@@ -524,26 +535,25 @@ class MultiTriplane(nn.Module):
         self.num_objs = num_objs
 
         # 每个物体（obj）有3个平面，所以一共有num_objs个物体的情况下就有3*num_objs个平面
-        self.embeddings = nn.ParameterList([nn.Parameter(torch.randn(1, 32, 128, 128)*0.001) for _ in range(3*num_objs)])
+        self.embeddings = nn.ParameterList([nn.Parameter(torch.randn(1, 40, 128, 128)*0.001) for _ in range(3*num_objs)])
         self.noise_val = noise_val
         # Use this if you want a PE
         self.net = nn.Sequential(
-            FourierFeatureTransform(32, 64, scale=1),
-            nn.Linear(128, 128),
-            nn.ReLU(inplace=True),
+            FourierFeatureTransform(120, 256, scale=1),
+            nn.Linear(512, 512),
+            nn.Softplus(),
             
-            nn.Linear(128, 128),
-            nn.ReLU(inplace=True),
+            nn.Linear(512, 512),
+            nn.Softplus(),
             
-            nn.Linear(128, output_dim),
+            nn.Linear(512, output_dim),
         )
 
     # TODO 感觉可以直接用
     def sample_plane(self, coords2d, plane):
         assert len(coords2d.shape) == 3, coords2d.shape
-        sampled_features = torch.nn.functional.grid_sample(plane,
-                                                           coords2d.reshape(coords2d.shape[0], 1, -1, coords2d.shape[-1]),
-                                                           mode='bilinear', padding_mode='zeros', align_corners=True)
+        sampled_features = grid_sample(plane,
+                                                           coords2d.reshape(coords2d.shape[0], 1, -1, coords2d.shape[-1]))
         N, C, H, W = sampled_features.shape
         sampled_features = sampled_features.reshape(N, C, H*W).permute(0, 2, 1)
         return sampled_features
@@ -556,6 +566,8 @@ class MultiTriplane(nn.Module):
         xy_embed = self.sample_plane(coordinates[..., 0:2], self.embeddings[3*obj_idx+0])
         yz_embed = self.sample_plane(coordinates[..., 1:3], self.embeddings[3*obj_idx+1])
         xz_embed = self.sample_plane(coordinates[..., :3:2], self.embeddings[3*obj_idx+2])
+
+        # print(xy_embed)
         
         #if self.noise_val != None:
         #    xy_embed = xy_embed + self.noise_val*torch.empty(xy_embed.shape).normal_(mean = 0, std = 0.5).to(self.device)
@@ -563,9 +575,11 @@ class MultiTriplane(nn.Module):
         #    xz_embed = xz_embed + self.noise_val*torch.empty(xz_embed.shape).normal_(mean = 0, std = 0.5).to(self.device)
 
         # 提取出三个方向上的features， 然后将它们相加
-        features = torch.sum(torch.stack([xy_embed, yz_embed, xz_embed]), dim=0) 
+        # features = torch.sum(torch.stack([xy_embed, yz_embed, xz_embed]), dim=0)
+        features = torch.cat([xy_embed, yz_embed, xz_embed], dim=-1)
         if self.noise_val != None and self.training:
             features = features + self.noise_val*torch.empty(features.shape).normal_(mean = 0, std = 0.5).to(self.device)
+        # print(features.shape)
         return self.net(features)
     
     def tvreg(self):
@@ -606,9 +620,8 @@ class CartesianPlaneNonSirenEmbeddingNetwork(nn.Module):
 
     def sample_plane(self, coords2d, plane):
         assert len(coords2d.shape) == 3, coords2d.shape
-        sampled_features = torch.nn.functional.grid_sample(plane,
-                                                           coords2d.reshape(coords2d.shape[0], 1, -1, coords2d.shape[-1]),
-                                                           mode='bilinear', padding_mode='zeros', align_corners=True)
+        sampled_features = grid_sample(plane,
+                                                           coords2d.reshape(coords2d.shape[0], 1, -1, coords2d.shape[-1]))
         N, C, H, W = sampled_features.shape
         sampled_features = sampled_features.reshape(N, C, H*W).permute(0, 2, 1)
         return sampled_features
@@ -679,16 +692,14 @@ class VolumeConvolutionalNetwork(nn.Module):
     def forward(self, coordinates, debug=False):
         batch_size, n_coords, n_dims = coordinates.shape
         if n_dims == 2:
-            sampled_features = torch.nn.functional.grid_sample(self.embeddings,
-                                                               coordinates.reshape(batch_size, 1, -1, n_dims),
-                                                               mode='bilinear', padding_mode='zeros', align_corners=True)
+            sampled_features = grid_sample(self.embeddings,
+                                                               coordinates.reshape(batch_size, 1, -1, n_dims))
             N, C, H, W = sampled_features.shape
             sampled_features = sampled_features.reshape(N, C, H*W).permute(0, 2, 1)
         elif n_dims == 3:
             embeddings = self.feature_generator(self.seed)
-            sampled_features = torch.nn.functional.grid_sample(embeddings,
-                                                               coordinates.reshape(batch_size, 1, 1, -1, n_dims),
-                                                               mode='bilinear', padding_mode='zeros', align_corners=True)
+            sampled_features = grid_sample(embeddings,
+                                                               coordinates.reshape(batch_size, 1, 1, -1, n_dims))
             N, C, H, W, D = sampled_features.shape
             sampled_features = sampled_features.reshape(N, C, H*W*D).permute(0, 2, 1)
         return self.net(sampled_features)

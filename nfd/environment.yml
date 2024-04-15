@@ -89,7 +89,6 @@ dependencies:
   - ncurses=6.3=h5eee18b_3
   - networkx=2.8.4=py310h06a4308_0
   - numpy=1.23.3=py310hd5efca6_0
-  - numpy-base=1.23.3=py310h8e6c178_0
   - openjpeg=2.4.0=h3ad879b_0
   - openssl=3.0.7=h0b41bf4_2
   - packaging=21.3=pyhd3eb1b0_0
@@ -126,6 +125,7 @@ dependencies:
   - zfp=0.5.5=h295c915_6
   - zlib=1.2.13=h166bdaf_4
   - zstd=1.5.2=ha4553b6_0
+  - pip
   - pip:
     - beautifulsoup4==4.11.1
     - blobfile==1.3.1
@@ -179,4 +179,4 @@ dependencies:
     - wandb==0.12.21
     - wcwidth==0.2.5
     - xmltodict==0.12.0
-prefix: /home/jrshue/miniconda3/envs/nfd
+prefix: /home/wzj/data/anaconda3/envs/nfd

@@ -3,3 +3,11 @@ samples
 *.npy
 *.ply
 nfd/models
+
+*.npz
+*.vscode*
+*.zip
+*.tar.gz
+*.obj
+*.pt
+*.whl
