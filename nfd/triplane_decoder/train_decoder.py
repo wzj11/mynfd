@@ -69,7 +69,7 @@ for epoch in range(1, 5701):
         # loss = nn.BCEWithLogitsLoss()(preds, Y)
 
         # Done: 修改sdf的loss
-        loss = ((preds[:, X.shape[1], :]).abs()).mean()
+        loss = ((preds[:, :X.shape[1], :]).abs()).mean()
 
         
         X_grad = gradient(T, preds)

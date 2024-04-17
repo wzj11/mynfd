@@ -541,10 +541,10 @@ class MultiTriplane(nn.Module):
         self.net = nn.Sequential(
             FourierFeatureTransform(32, 64, scale=1),
             nn.Linear(128, 128),
-            nn.ReLU(inplace=True),
+            nn.ReLU(),
             
             nn.Linear(128, 128),
-            nn.ReLU(inplace=True),
+            nn.ReLU(),
             
             nn.Linear(128, output_dim),
         )
