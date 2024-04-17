@@ -33,26 +33,39 @@ class model(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.net = torch.nn.Linear(3, 3)
+        self.epoch = 0
 
     def forward(self, x):
         return self.net(x)
+    
+test = model()
+for i in range(0,10):
+    test.epoch = i
 
-x = torch.randn((1, 3))
-x.requires_grad_()
+torch.save(test.state_dict(), 'test.pt')
+print(test.state_dict().keys())
 
-# with torch.no_grad():
-l = model()
-for param in l.parameters():
-    param.requires_grad_(False)
-# l = torch.nn.Linear(3, 3)
 
-# with torch.no_grad():
-y = l(x)
-# y.requires_grad_(False)
+ll = model()
+ll.load_state_dict(torch.load('test.pt'))
+print(ll.epoch)
 
-# with torch.no_grad():
-out = torch.sum(y, dim=-1)
+# x = torch.randn((1, 3))
+# x.requires_grad_()
 
-out.backward()
+# # with torch.no_grad():
+# l = model()
+# for param in l.parameters():
+#     param.requires_grad_(False)
+# # l = torch.nn.Linear(3, 3)
 
-print(l.net.weight, x.grad)
+# # with torch.no_grad():
+# y = l(x)
+# # y.requires_grad_(False)
+
+# # with torch.no_grad():
+# out = torch.sum(y, dim=-1)
+
+# out.backward()
+
+# print(l.net.weight, x.grad)

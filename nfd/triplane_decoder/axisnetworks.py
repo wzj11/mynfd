@@ -535,18 +535,18 @@ class MultiTriplane(nn.Module):
         self.num_objs = num_objs
 
         # 每个物体（obj）有3个平面，所以一共有num_objs个物体的情况下就有3*num_objs个平面
-        self.embeddings = nn.ParameterList([nn.Parameter(torch.randn(1, 64, 128, 128)*0.001) for _ in range(3*num_objs)])
+        self.embeddings = nn.ParameterList([nn.Parameter(torch.randn(1, 32, 128, 128)*0.001) for _ in range(3*num_objs)])
         self.noise_val = noise_val
         # Use this if you want a PE
         self.net = nn.Sequential(
-            FourierFeatureTransform(64, 128, scale=1),
-            nn.Linear(256, 256),
-            nn.Softplus(),
+            FourierFeatureTransform(32, 64, scale=1),
+            nn.Linear(128, 128),
+            nn.ReLU(inplace=True),
             
-            nn.Linear(256, 256),
-            nn.Softplus(),
+            nn.Linear(128, 128),
+            nn.ReLU(inplace=True),
             
-            nn.Linear(256, output_dim),
+            nn.Linear(128, output_dim),
         )
 
     # TODO 感觉可以直接用
@@ -582,18 +582,30 @@ class MultiTriplane(nn.Module):
         # print(features.shape)
         return self.net(features)
     
-    def tvreg(self):
+    def tvreg(self, obj_idx):
         l = 0
-        for embed in self.embeddings:
+        for embed in self.embeddings[3*obj_idx:3*obj_idx+3]:
             l += ((embed[:, :, 1:] - embed[:, :, :-1])**2).sum()**0.5
             l += ((embed[:, :, :, 1:] - embed[:, :, :, :-1])**2).sum()**0.5
         return l/self.num_objs
     
-    def l2reg(self):
+    def l2reg(self, obj_idx):
         l = 0
-        for embed in self.embeddings:
+        for embed in self.embeddings[3*obj_idx:3*obj_idx+3]:
             l += (embed**2).sum()**0.5
         return l/self.num_objs
+
+    def grad(self, num):
+        for para in self.embeddings:
+            para.requires_grad_(False)
+
+        self.embeddings[3*num+0].requires_grad_(True)
+        self.embeddings[3*num+1].requires_grad_(True)
+        self.embeddings[3*num+2].requires_grad_(True)
+
+    def all(self):
+        for para in self.embeddings:
+            para.requires_grad_(True)
     
     
     

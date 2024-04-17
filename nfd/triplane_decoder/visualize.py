@@ -80,8 +80,8 @@ def main(args=None):
         parser = argparse.ArgumentParser()
         parser.add_argument('--input', type=str)
         parser.add_argument('--output', type=str, required=True)
-        parser.add_argument('--model_path', type=str, default='/home/wzj/data/project/NFD/nfd/triplane_decoder/decoder_net_ckpt/latest/5980_decoder.pt', required=False)
-        parser.add_argument('--res', type=int, default='512', required=False)
+        parser.add_argument('--model_path', type=str, default='/home/wzj/data/project/NFD/nfd/triplane_decoder/decoder_net_ckpt/latest/5700_decoder.pt', required=False)
+        parser.add_argument('--res', type=int, default='128', required=False)
 
         args = parser.parse_args()
 	
@@ -95,7 +95,7 @@ def main(args=None):
 
     # 每个triplane平面的分辨率为 (128, 128), 可以认为每个triplane feature的维度为32维
     # triplanes = np.load(args.input).reshape(3, 32, 128, 128)
-    model.embeddings.load_state_dict(torch.load('/home/wzj/data/project/NFD/nfd/triplane_decoder/decoder_net_ckpt/latest/triplanes_5980.pt'))
+    model.embeddings.load_state_dict(torch.load('/home/wzj/data/project/NFD/nfd/triplane_decoder/decoder_net_ckpt/latest/triplanes_5700.pt'))
 
     print(model.embeddings)
     

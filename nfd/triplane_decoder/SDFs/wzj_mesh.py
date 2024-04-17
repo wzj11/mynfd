@@ -6,6 +6,8 @@ from glob import glob
 import torch
 from typing import Optional, Union
 
+
+
 def bbox(vertices: np.ndarray):
     # shape = vertices.shape
     # vertices = vertices.reshape(-1, 3)
@@ -22,15 +24,20 @@ def boundary(vertices: np.ndarray):
 
     return np.max((min, max))
 
-
+first_one = True
 
 file_list = glob('predata/*.obj')
 class MeshSDFS:
+    scale = 1
     def __init__(self, mesh: trimesh.base.Trimesh, num: int=0):
         
         self.mesh = mesh
         self.vertices = mesh.vertices
         self.num = num
+
+        self.sample_sdfs()
+
+        
 
 
     def compute_gt_SDFS(self, points: np.ndarray = None, num: int = None):
@@ -100,14 +107,40 @@ class MeshSDFS:
         
         # output = {}
         # TODO: 在测试时用了某一个物体它的boundary，但是在实际处理时，所有数据需要先对齐，所以这里的scale要改为一个对齐后的统一的scale
-        scale = boundary(self.vertices)
-        self.vertices = self.vertices / (2 * scale)
+        
+        global first_one
+        if first_one:
+            MeshSDFS.scale = boundary(self.vertices)
+            first_one = False
+            # print('first one')
+        self.vertices = self.vertices / (2 * MeshSDFS.scale)
 
-        vertex_normals = self.mesh.vertex_normals
+        # vertex_normals = self.mesh.vertex_normals
 
-        signal = np.sign(np.sum(vertex_normals * self.vertices, axis=-1, keepdims=True))
+        # faces = self.mesh.faces
+        # face_normals = self.mesh.face_normals
+        # points_num = self.vertices.shape[0]
+        # vertex_normals = np.zeros(self.vertices.shape)
 
-        vertex_normals = signal * vertex_normals
+        # vertices_tmp = self.vertices[None, ...]
+        # for i in range(points_num):
+        #     row = np.where((faces == i).any(axis=-1))[0]
+        #     # connect_faces = faces[row]
+        #     connect_faces_normals = face_normals[row]
+        #     vertex_normals[i] = np.sum(connect_faces_normals, axis=0)
+
+
+            # print(np.where((faces == i).any(axis=-1))) if i == 0 else None
+        
+
+        # vertex_normals = np.stack([np.sum(face_normals[(faces == i).any(axis=-1)], axis=0)    for i in range(points_num)], axis=0)
+        # length = np.linalg.norm(vertex_normals, axis=-1, keepdims=True)
+
+        # vertex_normals /= length
+
+        # signal = np.sign(np.sum(vertex_normals * self.vertices, axis=-1, keepdims=True))
+
+        # vertex_normals = signal * vertex_normals
 
         # print(np.sum(np.sum(vertex_normals * self.vertices, axis=-1) < 0))
 
@@ -119,10 +152,11 @@ class MeshSDFS:
         # sdfs = np.zeros((*shape, 1))
         # P_s = np.concatenate((self.vertices, sdfs), axis=-1)
         P_s = self.vertices
-        interval = np.array([0, 0.15, 0.30, 0.45, -0.15])
-        P_s = np.concatenate([np.concatenate([P_s + dis * vertex_normals, dis * np.ones((*shape, 1))], axis=-1) for dis in interval], axis=0)
+        interval = np.array([0.07, -0.07, 0.15, 0.30, 0.45, -0.15])
+        # P_s = np.concatenate([np.concatenate([P_s + dis * self.mesh.vertex_normals, dis * np.ones((*shape, 1))], axis=-1) for dis in interval], axis=0)
         # P_s = np.concatenate([P_s, np.repeat(vertex_normals, 4, axis=0)], axis=-1)
-        P_n = vertex_normals
+        # P_n = self.vertex_normals
+        # P_n = np.repeat(vertex_normals, 5, axis=0)
         # output['P_s'] = P_s
 
         *shape_1, points_num, dim = self.vertices.shape
@@ -131,15 +165,38 @@ class MeshSDFS:
         # row = np.where((np.abs(P_v) <= 1).any(axis=-1))[0]
         # P_v = P_v[row]
 
-        print(P_v.shape, points_num)
-        print(P_s.shape)
+        # print(P_v.shape, points_num)
+        # print(P_s.shape)
 
         # output['P_v'] = P_v
+        P_reg = np.concatenate([np.concatenate([self.vertices + dis * self.mesh.vertex_normals, dis * np.ones((*shape, 1))], axis=-1) for dis in interval], axis=0)
 
-        np.savez(f'right_data/{self.num}.npz', P_s=P_s, P_n=P_n, P_v=P_v)
+        np.savez(f'right_data/{self.num}.npz', P_s=self.vertices, P_n=self.mesh.vertex_normals, P_reg=P_reg, P_v=P_v)
+
+    @property
+    def vertex_normals(self):
+        # shape:(F, 3)
+
+        faces = self.mesh.faces
+        face_normals = self.mesh.face_normals
+        points_num = self.vertices.shape[0]
+        vertex_normals = np.zeros(self.vertices.shape)
+
+        # vertices_tmp = self.vertices[None, ...]
+        for i in range(points_num):
+            row = np.where((faces == i).any(axis=-1))[0]
+            # connect_faces = faces[row]
+            connect_faces_normals = face_normals[row]
+            vertex_normals[i] = np.sum(connect_faces_normals, axis=0)
+
+
+            # print(np.where((faces == i).any(axis=-1))) if i == 0 else None
+        length = np.linalg.norm(vertex_normals, axis=-1, keepdims=True)
+        return vertex_normals / length
+
 
     def test_circle(self):
-        interval = np.linspace(-0.5, 0.5, 11)
+        interval = np.array([0, 0.05, -0.05, 0.20, 0.45, -0.15])
         np.random.seed(1111)
         phi = np.random.uniform(0, np.pi, 30000)
         theta = np.random.uniform(0, 2*np.pi, 30000)
@@ -161,7 +218,7 @@ class MeshSDFS:
         vn = np.stack((x, y, z), axis=-1)
         points = np.concatenate([np.concatenate([P_s + dis * vn, dis * np.ones((*shape, 1))], axis=-1) for dis in interval], axis=0)
 
-        np.savez('right_data/test.npz', P_s=np.concatenate((points, np.repeat(np.stack((x, y, z), axis=-1), 9, axis=0)), axis=-1), P_v=P_v)
+        np.savez('test.npz', P_s=points, P_n=np.stack((x, y, z), axis=-1))
         
         # 返回笛卡尔坐标系下的点
         return np.stack((x, y, z), axis=-1)
@@ -228,19 +285,34 @@ def main(file: str = 'mytest.obj', num: int = None):
     # testobj = trimesh.load('/home/wzj/data/project/NFD/nfd/triplane_decoder/SDFs/mytest.obj')
     # test = MeshSDFS(testobj)
     # test.compute_gt_SDFS() 
+    files = []
+    for i in tqdm(range(1, 201), desc='load_file_list'):
+        path = f'/home/wzj/data/datasets/facescape/{i}/models_reg/*.obj'
+        files.extend(glob(path))
+    index = np.random.uniform(0, len(files), 500)
+    choice  = [files[int(i)] for i in index]
+    with open('right_data/objects.txt', 'w') as f:
+        # list(map(f.write))
+        for text in tqdm(choice, desc='record_obj_path'):
+            f.write(text + '\n')
 
-    wzj = trimesh.load('/home/wzj/data/datasets/facescape/1/models_reg/1_neutral.obj')
-    l = MeshSDFS(wzj)
-    l.sample_sdfs()
+    # wzj = trimesh.load('/home/wzj/data/datasets/facescape/1/models_reg/1_neutral.obj')
+    # l = MeshSDFS(wzj)
+    # l.sample_sdfs()
 
     # print(l.test_circle().shape)
     # print(bbox(wzj.vertices))
     # print(boundary(wzj.vertices))
+    for idx, obj in enumerate(tqdm(choice, desc='make_datasets')):
+        temp = trimesh.load(obj)
+        l = MeshSDFS(temp, idx)
 
 def test():
     testobj = trimesh.load('./mytest.obj')
     test = MeshSDFS(testobj)
-    print(test.compute_gt_SDFS(np.concatenate((test.vertices[0:2, ...], np.array([[0, 0, 0]])), axis=0)))
+    # print(test.compute_gt_SDFS(np.concatenate((test.vertices[0:2, ...], np.array([[0, 0, 0]])), axis=0)))
+    test.test_circle()
+    print(np.sum(np.linalg.norm(test.vertex_normals - test.vertices)))
 
 
 if __name__ == "__main__":
@@ -252,6 +324,7 @@ if __name__ == "__main__":
     # list(tqdm(map(main, file_list, range(1, 501)), total=len(file_list)))
 
     main()
+    # test()
 
     # main()
     # map(print, '12345')
