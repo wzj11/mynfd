@@ -27,12 +27,12 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, nu
 
 # num = len(os.listdir('SDFs/data'))
 # num = 1
-model = MultiTriplane(10, input_dim=3, output_dim=1, share=False).to(device)
+model = MultiTriplane(1, input_dim=3, output_dim=1, share=False).to(device)
 # model.net.load_state_dict(torch.load('/home/wzj/data/project/NFD/nfd/triplane_decoder/decoder_net_ckpt/2024-04-16-20:44:23/600_decoder.pt'))
 
 # model.embeddings.load_state_dict(torch.load('/home/wzj/data/project/NFD/nfd/triplane_decoder/decoder_net_ckpt/2024-04-16-20:44:23/triplanes_600.pt'))
 model.train()
-
+model.not_net()
 
 
 optimizer = torch.optim.Adam(model.parameters())
@@ -53,8 +53,6 @@ t0 = time.time()
 for epoch in range(1, 6001):
     model.change_stage() if epoch == 2001 and model.share else None
     loss_total = 0
-    optimizer.zero_grad()
-
     for obj_idx, X, normals, reg_X, reg_Y, sample in tqdm(dataloader, desc=f'epoch {epoch}'):
     # for obj_idx, X, X_1, truth, normals, sample in dataloader:
         # obj_idx = 0
@@ -82,7 +80,7 @@ for epoch in range(1, 6001):
         
         X_grad = gradient(T, preds)
 
-        T.requires_grad_(False)
+
         # normals = normals.view(-1, 3)
         # X.requires_grad_(False)
         normals_loss = ((X_grad[:, :X.shape[1], :] - normals).abs()).norm(2, dim=-1).mean()
@@ -113,12 +111,14 @@ for epoch in range(1, 6001):
         loss += model.tvreg(obj_idx) * 1e-2
         loss += model.l2reg(obj_idx) * 1e-3
         
-        # X.requires_grad_(False)
+        X.requires_grad_(False)
         # sample.requires_grad_(False)
         
+        optimizer.zero_grad()
         loss.backward()
 
         # # print(model.embeddings[0].grad)
+        optimizer.step()
 
         # optimizer.zero_grad()
 
@@ -130,8 +130,6 @@ for epoch in range(1, 6001):
         # print(obj_idx)
         # print(f'Epoch: {epoch} , idx: {obj_idx} Done')
         # continue
-    optimizer.step()
-    
     t1 = time.time()
     time1 = t1 - t0
     elapsed_rounded = int(round(time1))

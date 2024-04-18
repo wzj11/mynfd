@@ -11,8 +11,8 @@ class wzjData(Dataset):
 
         # npz_files = [os.path.join(data_dir, file) for file in os.listdir(data_dir) if file.endswith('.npz')]
         
-        npz_files = glob('/home/wzj/data/project/NFD/nfd/triplane_decoder/SDFs/right_data/*.npz')
-        # npz_files = ['/home/wzj/data/project/NFD/nfd/triplane_decoder/SDFs/test.npz']
+        npz_files = glob('/home/wzj/data/project/NFD/nfd/triplane_decoder/SDFs/right_data_facescape/*.npz')
+        # npz_files = ['/home/wzj/data/project/NFD/nfd/triplane_decoder/SDFs/right_data_new/1.npz']
         file_list = []
         for file in npz_files:
             temp = np.load(file, allow_pickle=True)
@@ -30,8 +30,8 @@ class wzjData(Dataset):
 
 
     def __len__(self):
-        return len(self.data)
-        # return 2
+        # return len(self.data)
+        return 10
     
     def __getitem__(self, idx):
         # 一个npz文件里的内容视为一个单独的整体

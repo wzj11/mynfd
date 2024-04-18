@@ -152,7 +152,7 @@ class MeshSDFS:
         # sdfs = np.zeros((*shape, 1))
         # P_s = np.concatenate((self.vertices, sdfs), axis=-1)
         P_s = self.vertices
-        interval = np.array([0.07, -0.07, 0.15, 0.30, 0.45, -0.15])
+        interval = np.array([0.07, -0.07, 0.2, 0.35, 0.4, 0.45, 0.5])
         # P_s = np.concatenate([np.concatenate([P_s + dis * self.mesh.vertex_normals, dis * np.ones((*shape, 1))], axis=-1) for dis in interval], axis=0)
         # P_s = np.concatenate([P_s, np.repeat(vertex_normals, 4, axis=0)], axis=-1)
         # P_n = self.vertex_normals
@@ -171,7 +171,7 @@ class MeshSDFS:
         # output['P_v'] = P_v
         P_reg = np.concatenate([np.concatenate([self.vertices + dis * self.mesh.vertex_normals, dis * np.ones((*shape, 1))], axis=-1) for dis in interval], axis=0)
 
-        np.savez(f'right_data/{self.num}.npz', P_s=self.vertices, P_n=self.mesh.vertex_normals, P_reg=P_reg, P_v=P_v)
+        np.savez(f'right_data_facescape/{self.num}.npz', P_s=self.vertices, P_n=self.mesh.vertex_normals, P_reg=P_reg, P_v=P_v)
 
     @property
     def vertex_normals(self):
@@ -308,11 +308,11 @@ def main(file: str = 'mytest.obj', num: int = None):
         l = MeshSDFS(temp, idx)
 
 def test():
-    testobj = trimesh.load('./mytest.obj')
+    testobj = trimesh.load('/home/wzj/data/datasets/h3d/h3ds_0.2/7dd427509fe84baa/full_head.obj')
     test = MeshSDFS(testobj)
     # print(test.compute_gt_SDFS(np.concatenate((test.vertices[0:2, ...], np.array([[0, 0, 0]])), axis=0)))
-    test.test_circle()
-    print(np.sum(np.linalg.norm(test.vertex_normals - test.vertices)))
+    # test.test_circle()
+    # print(np.sum(np.linalg.norm(test.vertex_normals - test.vertices)))
 
 
 if __name__ == "__main__":
