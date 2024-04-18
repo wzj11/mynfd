@@ -30,8 +30,8 @@ class wzjData(Dataset):
 
 
     def __len__(self):
-        # return len(self.data)
-        return 1
+        return len(self.data)
+        # return 2
     
     def __getitem__(self, idx):
         # 一个npz文件里的内容视为一个单独的整体

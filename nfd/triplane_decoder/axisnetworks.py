@@ -525,7 +525,7 @@ def gradient(inputs, outputs):
     return points_grad
 
 class MultiTriplane(nn.Module):
-    def __init__(self, num_objs, input_dim=3, output_dim=1, noise_val = None, device = 'cuda'):
+    def __init__(self, num_objs, input_dim=3, output_dim=1, noise_val = None, device = 'cuda', share=False):
         # forward输入的维度：(batch, point_num, 3)
 
 
@@ -533,8 +533,10 @@ class MultiTriplane(nn.Module):
         super().__init__()
         self.device = device
         self.num_objs = num_objs
+        self.share = share
 
         # 每个物体（obj）有3个平面，所以一共有num_objs个物体的情况下就有3*num_objs个平面
+        self.share_embeddings = nn.ParameterList([nn.Parameter(torch.randn(1, 32, 128, 128)*0.001) for _ in range(3)])
         self.embeddings = nn.ParameterList([nn.Parameter(torch.randn(1, 32, 128, 128)*0.001) for _ in range(3*num_objs)])
         self.noise_val = noise_val
         # Use this if you want a PE
@@ -562,10 +564,18 @@ class MultiTriplane(nn.Module):
     # 2. 将triplane features转换为sdf（原来是转换为occupancy value）
     def forward(self, obj_idx, coordinates, debug=False):
         batch_size, n_coords, n_dims = coordinates.shape
+        if not self.share:
+            embeddings = self.embeddings
+            idx = obj_idx
+        else:
+            embeddings = self.share_embeddings
+            idx = 0
+
         
-        xy_embed = self.sample_plane(coordinates[..., 0:2], self.embeddings[3*obj_idx+0])
-        yz_embed = self.sample_plane(coordinates[..., 1:3], self.embeddings[3*obj_idx+1])
-        xz_embed = self.sample_plane(coordinates[..., :3:2], self.embeddings[3*obj_idx+2])
+        
+        xy_embed = self.sample_plane(coordinates[..., 0:2], embeddings[3*idx+0])
+        yz_embed = self.sample_plane(coordinates[..., 1:3], embeddings[3*idx+1])
+        xz_embed = self.sample_plane(coordinates[..., :3:2], embeddings[3*idx+2])
 
         # print(xy_embed)
         
@@ -606,6 +616,14 @@ class MultiTriplane(nn.Module):
     def all(self):
         for para in self.embeddings:
             para.requires_grad_(True)
+
+    def change_stage(self):
+        self.share = not self.share
+
+    def update_para(self, obj_idx):
+        self.embeddings[3 * obj_idx + 0] = self.share_embeddings[0].detach().clone().requires_grad_()
+        self.embeddings[3 * obj_idx + 1] = self.share_embeddings[1].detach().clone().requires_grad_()
+        self.embeddings[3 * obj_idx + 2] = self.share_embeddings[2].detach().clone().requires_grad_()
     
     
     

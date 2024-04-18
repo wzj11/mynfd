@@ -27,7 +27,7 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, nu
 
 # num = len(os.listdir('SDFs/data'))
 # num = 1
-model = MultiTriplane(1, input_dim=3, output_dim=1).to(device)
+model = MultiTriplane(len(dataset), input_dim=3, output_dim=1, share=True).to(device)
 # model.net.load_state_dict(torch.load('/home/wzj/data/project/NFD/nfd/triplane_decoder/decoder_net_ckpt/2024-04-16-20:44:23/600_decoder.pt'))
 
 # model.embeddings.load_state_dict(torch.load('/home/wzj/data/project/NFD/nfd/triplane_decoder/decoder_net_ckpt/2024-04-16-20:44:23/triplanes_600.pt'))
@@ -50,7 +50,8 @@ formatted_datetime = current_datetime.strftime("%Y-%m-%d-%H:%M:%S")
 os.makedirs(f'decoder_net_ckpt/{formatted_datetime}')
 os.system(f'ln -s ./{formatted_datetime} decoder_net_ckpt/latest')
 t0 = time.time()
-for epoch in range(1, 5701):
+for epoch in range(1, 12001):
+    model.change_stage() if epoch == 2001 else None
     loss_total = 0
     for obj_idx, X, normals, reg_X, reg_Y, sample in tqdm(dataloader, desc=f'epoch {epoch}'):
     # for obj_idx, X, X_1, truth, normals, sample in dataloader:
@@ -60,6 +61,11 @@ for epoch in range(1, 5701):
         # X, X_n, truth, normals, sample = X.float().cuda(), X_n.float().cuda(), truth.float().cuda(), normals.float().cuda(), sample.float().cuda()
         # T = torch.cat([X, sample], dim=1)
         # X_a, X_b = X[:, :X.shape[1] // 3, :], X[:, X.shape[1] // 3:, :]
+        if epoch == 2001:
+            # print('before:', model.embeddings[0]) if obj_idx == 0 else None
+            
+            model.update_para(obj_idx)
+            # print('after:', model.embeddings[0]) if obj_idx == 0 else None
         T = torch.cat((X, sample), dim=1)
         T.requires_grad_()
         # X_a.requires_grad_()
@@ -131,9 +137,10 @@ for epoch in range(1, 5701):
     print(f"Epoch: {epoch} \t {loss_total.item():01f} \t time:{time1} \t")
     
     if epoch%100 == 0:
-        torch.save(model.net.state_dict(), f"decoder_net_ckpt/{formatted_datetime}/{epoch}_decoder.pt")
+        supply = 'share' if epoch < 2001 and model.share else ''
+        torch.save(model.net.state_dict(), f"decoder_net_ckpt/{formatted_datetime}/{supply}{epoch}_decoder.pt")
         print(model.embeddings.state_dict().keys())
-        torch.save(model.embeddings.state_dict(), f"decoder_net_ckpt/{formatted_datetime}/"+f"triplanes_{epoch}.pt")
+        torch.save(model.embeddings.state_dict(), f"decoder_net_ckpt/{formatted_datetime}/" + supply + f"triplanes_{epoch}.pt")
 
         # torch.save(model.net.state_dict(), f"decoder_net_ckpt/latest/{epoch}_decoder.pt")
 
