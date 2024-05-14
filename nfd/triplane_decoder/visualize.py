@@ -80,14 +80,14 @@ def main(args=None):
         parser = argparse.ArgumentParser()
         parser.add_argument('--input', type=str)
         parser.add_argument('--output', type=str, required=True)
-        parser.add_argument('--model_path', type=str, default='/home/wzj/data/project/NFD/nfd/triplane_decoder/decoder_net_ckpt/latest/300_decoder.pt', required=False)
-        parser.add_argument('--res', type=int, default='128', required=False)
+        parser.add_argument('--model_path', type=str, default='/home/wzj/data/project/NFD/nfd/triplane_decoder/decoder_net_ckpt/latest/5000_decoder.pt', required=False)
+        parser.add_argument('--res', type=int, default='256', required=False)
 
         args = parser.parse_args()
 	
     # MultiTriplane 将一个三维坐标点的输入转换为一个1位的occupancy value, 其实就是triplane decoder
     
-    model = MultiTriplane(10, input_dim=3, output_dim=1).to(device)
+    model = MultiTriplane(1, input_dim=3, output_dim=1).to(device)
 
 
     # model.net应该就是将triplane features转为occupancy values的decoder
@@ -96,7 +96,7 @@ def main(args=None):
 
     # 每个triplane平面的分辨率为 (128, 128), 可以认为每个triplane feature的维度为32维
     # triplanes = np.load(args.input).reshape(3, 32, 128, 128)
-    model.embeddings.load_state_dict(torch.load('/home/wzj/data/project/NFD/nfd/triplane_decoder/decoder_net_ckpt/latest/triplanes_300.pt'))
+    model.embeddings.load_state_dict(torch.load('/home/wzj/data/project/NFD/nfd/triplane_decoder/decoder_net_ckpt/latest/triplanes_5000.pt'))
 
     print(model.embeddings)
     
@@ -113,7 +113,7 @@ def main(args=None):
     print(model(torch.tensor([0]), test3))
 
     # exit()
-    create_obj(model, 6, res = args.res, output_path = args.output)  # res = 256
+    create_obj(model, 0, res = args.res, output_path = args.output)  # res = 256
     
 if __name__ == "__main__":
     main()

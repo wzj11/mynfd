@@ -146,13 +146,15 @@ class MeshSDFS:
 
         # out = np.concatenate([self.vertices, vertex_normals], axis=-1)
         # print(out.shape)
+        surface_samples, face_idx = trimesh.sample.sample_surface_even(self.mesh, count=60000)
 
+        normals = self.mesh.face_normals[face_idx]
         # np.save(f'data/obj_{num}.npy', out)
         *shape, _ = self.vertices.shape
         # sdfs = np.zeros((*shape, 1))
         # P_s = np.concatenate((self.vertices, sdfs), axis=-1)
         P_s = self.vertices
-        interval = np.array([0.07, -0.07, 0.2, 0.35, 0.4, 0.45, 0.5])
+        interval = np.array([0.10, -0.10, 0.2, -0.2])
         # P_s = np.concatenate([np.concatenate([P_s + dis * self.mesh.vertex_normals, dis * np.ones((*shape, 1))], axis=-1) for dis in interval], axis=0)
         # P_s = np.concatenate([P_s, np.repeat(vertex_normals, 4, axis=0)], axis=-1)
         # P_n = self.vertex_normals
@@ -160,7 +162,7 @@ class MeshSDFS:
         # output['P_s'] = P_s
 
         *shape_1, points_num, dim = self.vertices.shape
-        P_v = np.random.random((*shape_1, 4 * points_num, 3)) * 2 - 1
+        P_v = np.random.random((*shape_1, 40000, 3)) * 2 - 1
 
         # row = np.where((np.abs(P_v) <= 1).any(axis=-1))[0]
         # P_v = P_v[row]
@@ -169,9 +171,12 @@ class MeshSDFS:
         # print(P_s.shape)
 
         # output['P_v'] = P_v
-        P_reg = np.concatenate([np.concatenate([self.vertices + dis * self.mesh.vertex_normals, dis * np.ones((*shape, 1))], axis=-1) for dis in interval], axis=0)
+        row = np.arange(self.vertices.shape[0])
+        np.random.shuffle(row)
 
-        np.savez(f'right_data_facescape/{self.num}.npz', P_s=self.vertices, P_n=self.mesh.vertex_normals, P_reg=P_reg, P_v=P_v)
+        P_reg = np.concatenate([self.vertices[row[:10000]] + dis * self.mesh.vertex_normals[row[:10000]] for dis in interval], axis=0)
+        surface_samples /= (2 * MeshSDFS.scale)
+        np.savez(f'test_data/{self.num}.npz', P_s=surface_samples, P_n=normals, P_v=P_v)
 
     @property
     def vertex_normals(self):
@@ -323,8 +328,8 @@ if __name__ == "__main__":
 
     # list(tqdm(map(main, file_list, range(1, 501)), total=len(file_list)))
 
-    main()
-    # test()
+    # main()
+    test()
 
     # main()
     # map(print, '12345')

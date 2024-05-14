@@ -11,3 +11,4 @@ nfd/models
 *.obj
 *.pt
 *.whl
+nfd/triplane_decoder/decoder_net_ckpt/*

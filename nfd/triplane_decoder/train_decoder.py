@@ -27,7 +27,7 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True, nu
 
 # num = len(os.listdir('SDFs/data'))
 # num = 1
-model = MultiTriplane(10, input_dim=3, output_dim=1, share=False).to(device)
+model = MultiTriplane(1, input_dim=3, output_dim=1, share=False).to(device)
 # model.net.load_state_dict(torch.load('/home/wzj/data/project/NFD/nfd/triplane_decoder/decoder_net_ckpt/2024-04-16-20:44:23/600_decoder.pt'))
 
 # model.embeddings.load_state_dict(torch.load('/home/wzj/data/project/NFD/nfd/triplane_decoder/decoder_net_ckpt/2024-04-16-20:44:23/triplanes_600.pt'))
@@ -50,12 +50,12 @@ formatted_datetime = current_datetime.strftime("%Y-%m-%d-%H:%M:%S")
 os.makedirs(f'decoder_net_ckpt/{formatted_datetime}')
 os.system(f'ln -s ./{formatted_datetime} decoder_net_ckpt/latest')
 t0 = time.time()
-for epoch in range(1, 6001):
+for epoch in range(1, 15001):
     model.change_stage() if epoch == 2001 and model.share else None
     loss_total = 0
     optimizer.zero_grad()
 
-    for obj_idx, X, normals, reg_X, reg_Y, sample in tqdm(dataloader, desc=f'epoch {epoch}'):
+    for obj_idx, X, normals, sample in tqdm(dataloader, desc=f'epoch {epoch}'):
     # for obj_idx, X, X_1, truth, normals, sample in dataloader:
         # obj_idx = 0
         # model.grad(obj_idx)
@@ -77,7 +77,7 @@ for epoch in range(1, 6001):
         # loss = nn.BCEWithLogitsLoss()(preds, Y)
 
         # Done: 修改sdf的loss
-        loss = ((preds[:, :X.shape[1], :]).abs()).mean()
+        loss = 2 * ((preds[:, :X.shape[1], :]).abs()).mean()
 
         
         X_grad = gradient(T, preds)
@@ -85,21 +85,21 @@ for epoch in range(1, 6001):
         T.requires_grad_(False)
         # normals = normals.view(-1, 3)
         # X.requires_grad_(False)
-        normals_loss = ((X_grad[:, :X.shape[1], :] - normals).abs()).norm(2, dim=-1).mean()
+        normals_loss = (X_grad[:, :X.shape[1], :].mul(normals).sum(dim=-1) - 1).abs().mean()
         # # # TODO: 加normals_loss 的系数
-        loss = loss + 0.35 * normals_loss
+        loss = loss + 0.3 * normals_loss
 
 
 
         # sdf reg
-        pred_reg = model(obj_idx, reg_X)
-        loss = loss + 0.8 * ((pred_reg - reg_Y).abs()).mean()
+        # pred_reg = model(obj_idx, reg_X)
+        loss = loss + 0.01 * torch.exp(-1e1 * (preds[:, X.shape[1]:, :]).abs()).mean()
 
         # TODO: 加随机采样点，使其法向（也就是梯度）的模长唯一作为eikonal loss
         # sample_preds = model(obj_idx, sample)
         # sample.requires_grad_()
         # sample_grad = gradient(sample, sample_preds)
-        eikonal_loss = ((X_grad[:, X.shape[1]:, :].norm(2, dim=-1) - 1)**2).mean()
+        eikonal_loss = ((X_grad.norm(2, dim=-1) - 1).abs()).mean()
         loss += 0.1 * eikonal_loss
 
         
@@ -136,7 +136,7 @@ for epoch in range(1, 6001):
     time1 = t1 - t0
     elapsed_rounded = int(round(time1))
     time1 = str(datetime.timedelta(seconds=elapsed_rounded))
-    print(f"Epoch: {epoch} \t {loss_total.item():01f} \t time:{time1} \t")
+    print(f"Epoch: {epoch} \t {loss_total.item():01f} \t normal_loss:{normals_loss} \t eikonal_loss:{eikonal_loss} \t time:{time1} \t")
     
     if epoch%100 == 0:
         supply = 'share' if epoch < 2001 and model.share else ''

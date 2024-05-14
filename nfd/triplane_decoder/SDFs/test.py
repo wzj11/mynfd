@@ -1,4 +1,4 @@
-from wzj_mesh import MeshSDFS
+from nfd.triplane_decoder.SDFs.generate_datasets import MeshSDFS
 import trimesh
 import numpy as np
 import json

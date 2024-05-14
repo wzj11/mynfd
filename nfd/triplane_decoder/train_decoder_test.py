@@ -35,7 +35,7 @@ model.train()
 model.not_net()
 
 
-optimizer = torch.optim.Adam(model.parameters())
+optimizer = torch.optim.Adam([{"params":model.net.parameters(), "lr":5e-4}, {"params":model.embeddings.parameters()}, {"params":model.share_embeddings.parameters()}], lr=1e-3)
 
 # print('yes')
 losses = []
